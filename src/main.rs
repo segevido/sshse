@@ -50,7 +50,7 @@ fn main() -> Result<()> {
         }
         None => {
             let mut history = History::new(paths.history.clone());
-            let mut creds = CredentialsManager::new(paths.credentials.clone(), paths.key.clone())?;
+            let creds = CredentialsManager::new(paths.credentials.clone(), paths.key.clone())?;
             let host = match cli.host {
                 Some(h) => h,
                 None => history.select()?.context("no hosts in history")?,

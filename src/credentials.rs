@@ -19,7 +19,6 @@ struct CredentialsFile {
 
 pub struct CredentialsManager {
     path: PathBuf,
-    key_path: PathBuf,
     key: LessSafeKey,
     data: CredentialsFile,
 }
@@ -48,12 +47,7 @@ impl CredentialsManager {
         } else {
             CredentialsFile::default()
         };
-        Ok(Self {
-            path,
-            key_path,
-            key,
-            data,
-        })
+        Ok(Self { path, key, data })
     }
 
     pub fn store(&mut self, host: &str, user: &str, password: &str) -> Result<()> {
