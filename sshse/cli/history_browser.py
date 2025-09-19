@@ -215,7 +215,7 @@ class CursesHistoryUI:
         def _safe_add(y: int, text: str, attr: int = curses.A_NORMAL) -> None:
             if 0 <= y < height:
                 with suppress(curses.error):
-                    stdscr.addnstr(y, 0, text.ljust(width)[: width], width, attr)
+                    stdscr.addnstr(y, 0, text.ljust(width)[:width], width, attr)
 
         filter_label = "Filter: " + buffer
         _safe_add(0, filter_label, curses.A_BOLD)

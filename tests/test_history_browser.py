@@ -44,6 +44,7 @@ def test_history_browser_handles_empty_history(capsys: pytest.CaptureFixture[str
     assert exit_code == 0
     assert "No SSH history" in captured
 
+
 def test_history_browser_filters_and_launches_selected_entry() -> None:
     """Filtering the list should narrow the options before launching the entry."""
 
