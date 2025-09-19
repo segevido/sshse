@@ -6,7 +6,8 @@ on:
   pull_request:
 
 jobs:
-  lint-and-test:
+  lint:
+    name: Lint & Static Analysis
     runs-on: ubuntu-latest
 
     steps:
@@ -17,16 +18,47 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install .[dev]
 
-      - name: Run lint
-        run: |
-          ruff check .
+      - name: Check formatting with Black
+        run: black --check .
 
-      - name: Run pytest
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Run mypy
+        run: mypy sshse
+
+      - name: Run Bandit
+        run: bandit -r sshse -q
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
         run: |
-          pytest
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run pytest with coverage
+        run: pytest --cov=sshse --cov-report=term-missing
