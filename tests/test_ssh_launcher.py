@@ -9,6 +9,7 @@ import pytest
 from sshse.cli import ssh_launcher
 from sshse.core.history import HistoryEntry
 
+
 def test_build_command_includes_username_and_port() -> None:
     """The generated command should reflect entry metadata."""
 
@@ -37,7 +38,10 @@ def test_run_ssh_invokes_subprocess(monkeypatch: Any) -> None:
     assert captured["command"] == ["ssh", "example.com"]
 
 
-def test_run_ssh_handles_missing_binary(monkeypatch: Any, capsys: pytest.CaptureFixture[str]) -> None:
+def test_run_ssh_handles_missing_binary(
+    monkeypatch: Any,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """A missing ssh binary should produce a friendly error."""
 
     entry = HistoryEntry(hostname="example.com")

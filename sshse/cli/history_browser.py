@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, Iterable, Protocol
+from typing import Protocol
 
 import typer
 
@@ -40,7 +41,7 @@ def _default_output(message: str) -> None:
 class HistoryUI(Protocol):
     """UI contract for rendering and selecting a history entry."""
 
-    def run(self, session: "HistorySession") -> HistoryEntry | None: ...
+    def run(self, session: HistorySession) -> HistoryEntry | None: ...
 
 
 def _filter_entries(entries: Iterable[HistoryEntry], query: str) -> list[HistoryEntry]:
@@ -128,7 +129,10 @@ class HistorySession:
 class CursesHistoryUI:
     """Render the session using Python's built-in curses toolkit."""
 
-    def run(self, session: HistorySession) -> HistoryEntry | None:  # pragma: no cover - requires tty
+    def run(
+        self,
+        session: HistorySession,
+    ) -> HistoryEntry | None:  # pragma: no cover - requires tty
         with suppress(ImportError):
             import curses
 
@@ -195,7 +199,13 @@ class CursesHistoryUI:
                         session.apply_filter(filter_buffer)
                     continue
 
-    def _render(self, stdscr, session: HistorySession, buffer: str, curses) -> None:  # pragma: no cover - requires tty
+    def _render(
+        self,
+        stdscr,
+        session: HistorySession,
+        buffer: str,
+        curses,
+    ) -> None:  # pragma: no cover - requires tty
         stdscr.erase()
         height, width = stdscr.getmaxyx()
         if height <= 0 or width <= 0:
@@ -204,10 +214,8 @@ class CursesHistoryUI:
 
         def _safe_add(y: int, text: str, attr: int = curses.A_NORMAL) -> None:
             if 0 <= y < height:
-                try:
+                with suppress(curses.error):
                     stdscr.addnstr(y, 0, text.ljust(width)[: width], width, attr)
-                except curses.error:
-                    pass
 
         filter_label = "Filter: " + buffer
         _safe_add(0, filter_label, curses.A_BOLD)
@@ -244,7 +252,7 @@ class CursesHistoryUI:
                 user = entry.username or "-"
                 destination = entry.hostname
                 port = entry.port or "-"
-                line = "{:<25} {:<12} {:<30} {:<6}".format(entry.hostname, user, destination, port)
+                line = f"{entry.hostname:<25} {user:<12} {destination:<30} {port:<6}"
                 attr = curses.A_REVERSE if selected else curses.A_NORMAL
                 _safe_add(row, line, attr)
 
@@ -319,10 +327,12 @@ class PromptHistoryUI:
         if remaining > 0:
             more_label = "result" if remaining == 1 else "results"
             self._output(
-                f"     ... {remaining} more {more_label}. Narrow the filter to see additional connections."
+                f"     ... {remaining} more {more_label}. "
+                "Narrow the filter to see additional connections."
             )
         self._output(
-            "Commands: enter = connect highlighted • number = connect by index • text = filter • 'clear' resets"
+            "Commands: enter = connect highlighted • number = connect by index • text = filter "
+            "• 'clear' resets"
         )
 
 

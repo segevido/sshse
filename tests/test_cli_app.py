@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import importlib
+from typing import Any
 
 from typer import Typer
 from typer.testing import CliRunner
+
 from sshse import __version__
 from sshse.cli.app import app, main
 from sshse.core.history import HistoryEntry
@@ -68,7 +68,13 @@ def test_main_connects_direct_host(monkeypatch: Any) -> None:
             recorded["store"] = self
             self.calls: list[tuple[str, str | None]] = []
 
-        def record(self, hostname: str, *, username: str | None = None, port: int | None = None) -> HistoryEntry:
+        def record(
+            self,
+            hostname: str,
+            *,
+            username: str | None = None,
+            port: int | None = None,
+        ) -> HistoryEntry:
             self.calls.append((hostname, username))
             return HistoryEntry(hostname=hostname, username=username, port=port)
 

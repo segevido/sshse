@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Sequence
+from typing import Any
 
 from platformdirs import user_data_path
 
@@ -22,7 +23,7 @@ _DEFAULT_MAX_ENTRIES = 128
 
 def _utcnow() -> datetime:
     """Return a timezone-aware UTC timestamp."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass(slots=True)
@@ -48,7 +49,7 @@ class HistoryEntry:
         return payload
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "HistoryEntry":
+    def from_payload(cls, payload: dict[str, Any]) -> HistoryEntry:
         """Reconstruct an entry instance from serialized data."""
 
         hostname = payload.get("hostname")
@@ -67,7 +68,7 @@ class HistoryEntry:
             raise ValueError("Invalid timestamp in history entry") from exc
 
         if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
+            timestamp = timestamp.replace(tzinfo=UTC)
 
         port = payload.get("port")
         if port is not None:
@@ -149,7 +150,11 @@ class HistoryStore:
             entries = entries[:limit]
             self._write_payloads(entry.to_payload() for entry in entries)
 
-    def _merge(self, entries: Sequence[HistoryEntry], fresh_entry: HistoryEntry) -> list[HistoryEntry]:
+    def _merge(
+        self,
+        entries: Sequence[HistoryEntry],
+        fresh_entry: HistoryEntry,
+    ) -> list[HistoryEntry]:
         """Place the most recent entry first and deduplicate by connection details."""
 
         merged = [fresh_entry]

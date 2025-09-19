@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -20,12 +20,17 @@ class StubStore(HistoryStore):
         return list(self._entries)
 
 
-def _make_entry(hostname: str, *, username: str | None = None, port: int | None = None) -> HistoryEntry:
+def _make_entry(
+    hostname: str,
+    *,
+    username: str | None = None,
+    port: int | None = None,
+) -> HistoryEntry:
     return HistoryEntry(
         hostname=hostname,
         username=username,
         port=port,
-        last_connected_at=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        last_connected_at=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
     )
 
 
