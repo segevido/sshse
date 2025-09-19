@@ -20,22 +20,26 @@ def test_build_command_includes_username_and_port() -> None:
     assert command == ["ssh", "alice@example.com", "-p", "2222"]
 
 
-def test_run_ssh_invokes_subprocess(monkeypatch: Any) -> None:
-    """run_ssh should delegate to subprocess.call with the built command."""
+def test_run_ssh_invokes_spawn(monkeypatch: Any) -> None:
+    """run_ssh should invoke the spawn helper with the resolved ssh binary."""
 
     entry = HistoryEntry(hostname="example.com")
     captured: dict[str, Any] = {}
 
-    def fake_call(command: list[str]) -> int:
-        captured["command"] = command
-        return 42
+    def fake_which(_: str) -> str:
+        return "/usr/bin/ssh"
 
-    monkeypatch.setattr(ssh_launcher.subprocess, "call", fake_call)
+    def fake_spawn(argv: list[str]) -> int:
+        captured["argv"] = list(argv)
+        return 42 << 8
+
+    monkeypatch.setattr(ssh_launcher.shutil, "which", fake_which)
+    monkeypatch.setattr(ssh_launcher, "_spawn_ssh", fake_spawn)
 
     exit_code = ssh_launcher.run_ssh(entry)
 
     assert exit_code == 42
-    assert captured["command"] == ["ssh", "example.com"]
+    assert captured["argv"] == ["/usr/bin/ssh", "example.com"]
 
 
 def test_run_ssh_handles_missing_binary(
@@ -46,10 +50,7 @@ def test_run_ssh_handles_missing_binary(
 
     entry = HistoryEntry(hostname="example.com")
 
-    def fake_call(_: list[str]) -> int:
-        raise FileNotFoundError
-
-    monkeypatch.setattr(ssh_launcher.subprocess, "call", fake_call)
+    monkeypatch.setattr(ssh_launcher.shutil, "which", lambda _: None)
 
     exit_code = ssh_launcher.run_ssh(entry)
 
