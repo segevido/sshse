@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from sshse.cli.history_browser import HistoryBrowser
+from sshse.cli.history_browser import HistoryBrowser, HistorySession, PromptHistoryUI
 from sshse.core.history import HistoryEntry, HistoryStore
 
 
@@ -62,11 +62,12 @@ def test_history_browser_filters_and_launches_selected_entry() -> None:
         launched.append(entry)
         return 42
 
+    ui = PromptHistoryUI(prompt=fake_prompt, output=fake_output)
     browser = HistoryBrowser(
         store=StubStore(entries),
-        prompt=fake_prompt,
         output=fake_output,
         launcher=fake_launcher,
+        ui=ui,
     )
 
     exit_code = browser.run()
@@ -95,11 +96,12 @@ def test_history_browser_clear_resets_filter_before_launch() -> None:
         launched.append(entry)
         return 5
 
+    ui = PromptHistoryUI(prompt=fake_prompt, output=lambda _: None)
     browser = HistoryBrowser(
         store=StubStore(entries),
-        prompt=fake_prompt,
         output=lambda _: None,
         launcher=fake_launcher,
+        ui=ui,
     )
 
     exit_code = browser.run()
@@ -124,11 +126,12 @@ def test_history_browser_reprompts_on_invalid_choice() -> None:
     def fake_launcher(_: HistoryEntry) -> int:
         return 0
 
+    ui = PromptHistoryUI(prompt=fake_prompt, output=fake_output)
     browser = HistoryBrowser(
         store=StubStore(entries),
-        prompt=fake_prompt,
         output=fake_output,
         launcher=fake_launcher,
+        ui=ui,
     )
 
     exit_code = browser.run()
@@ -153,14 +156,31 @@ def test_history_browser_guides_when_no_matches() -> None:
     def fake_launcher(_: HistoryEntry) -> int:
         return 0
 
+    ui = PromptHistoryUI(prompt=fake_prompt, output=fake_output)
     browser = HistoryBrowser(
         store=StubStore(entries),
-        prompt=fake_prompt,
         output=fake_output,
         launcher=fake_launcher,
+        ui=ui,
     )
 
     exit_code = browser.run()
 
     assert exit_code == 0
     assert any("No matches" in line for line in log)
+
+
+def test_history_session_filters_on_username_and_port() -> None:
+    """Filtering should match against username and port metadata."""
+
+    entries = [
+        _make_entry("alpha.example.com", username="admin", port=22),
+        _make_entry("beta.example.com", username="deploy", port=2222),
+        _make_entry("gamma.example.com", username="service", port=2200),
+    ]
+
+    session = HistorySession(entries, page_size=10)
+    session.apply_filter("deploy 2222")
+
+    filtered_hosts = [entry.hostname for entry in session.filtered()]
+    assert filtered_hosts == ["beta.example.com"]
