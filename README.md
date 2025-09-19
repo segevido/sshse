@@ -106,7 +106,7 @@ With the virtual environment active, run the following to validate changes:
 ruff check .
 black .
 mypy sshse
-pytest --cov=sshse --cov-report=term-missing
+pytest --cov=sshse --cov-report=term-missing --cov-fail-under=100
 ```
 
 Bandit (`bandit -r sshse -q`) is also configured for security scanning. Pre-commit hooks will enforce formatting and linting on each commit when enabled.

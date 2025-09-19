@@ -6,7 +6,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from sshse.cli.history_browser import HistoryBrowser, HistorySession, PromptHistoryUI
+from sshse.cli import history_browser as hb
+from sshse.cli.history_browser import (
+    HistoryBrowser,
+    HistorySession,
+    PromptHistoryUI,
+    _clamp,
+    launch_history_browser,
+)
 from sshse.core.history import HistoryEntry, HistoryStore
 
 
@@ -190,3 +197,210 @@ def test_history_session_filters_on_username_and_port() -> None:
 
     filtered_hosts = [entry.hostname for entry in session.filtered()]
     assert filtered_hosts == ["beta.example.com"]
+
+
+def test_history_session_navigation_when_empty() -> None:
+    """Navigation helpers should gracefully handle empty result sets."""
+
+    session = HistorySession([], page_size=1)
+    session.apply_filter("anything")
+    session.move_selection(1)
+
+    assert session.selection_index == -1
+    assert session.current() is None
+    assert session.page_bounds() == (0, session.page_size)
+
+
+def test_prompt_ui_handles_interrupt() -> None:
+    """EOF during prompting should return without launching a session."""
+
+    log: list[str] = []
+    session = HistorySession([_make_entry("alpha")], page_size=5)
+
+    def raise_eof(_: str) -> str:
+        raise EOFError
+
+    ui = PromptHistoryUI(prompt=raise_eof, output=log.append)
+
+    assert ui.run(session) is None
+    assert log[-1] == ""
+
+
+def test_prompt_ui_accepts_current_selection_on_enter() -> None:
+    """Submitting an empty string should accept the highlighted entry."""
+
+    prompts = iter([""])
+    session = HistorySession([_make_entry("alpha")], page_size=5)
+
+    def fake_prompt(_: str) -> str:
+        return next(prompts)
+
+    ui = PromptHistoryUI(prompt=fake_prompt, output=lambda _: None)
+
+    entry = ui.run(session)
+    assert entry is not None
+    assert entry.hostname == "alpha"
+
+
+def test_prompt_ui_handles_quit_commands() -> None:
+    """Entering quit keywords should abort the session."""
+
+    prompts = iter(["q"])
+    session = HistorySession([_make_entry("alpha")], page_size=5)
+
+    def fake_prompt(_: str) -> str:
+        return next(prompts)
+
+    ui = PromptHistoryUI(prompt=fake_prompt, output=lambda _: None)
+
+    assert ui.run(session) is None
+
+
+def test_prompt_ui_render_reports_remaining_results() -> None:
+    """The renderer should advertise when additional results are available."""
+
+    entries = [_make_entry(f"host-{idx}") for idx in range(7)]
+    session = HistorySession(entries, page_size=5)
+    session.apply_filter("")
+
+    log: list[str] = []
+    ui = PromptHistoryUI(prompt=lambda _: "", output=log.append)
+    ui._render(session)
+
+    assert any("more" in line for line in log)
+
+
+def test_history_browser_recovers_from_runtime_error() -> None:
+    """Runtime errors from the primary UI should trigger the prompt fallback."""
+
+    entries = [_make_entry("alpha")]
+    log: list[str] = []
+    prompts = iter(["q"])
+
+    class ExplodingUI:
+        def run(self, session: HistorySession) -> HistoryEntry | None:
+            raise RuntimeError("boom")
+
+    def fake_prompt(_: str) -> str:
+        return next(prompts)
+
+    browser = HistoryBrowser(
+        store=StubStore(entries),
+        output=log.append,
+        launcher=lambda _: 99,
+        ui=ExplodingUI(),
+        prompt=fake_prompt,
+    )
+
+    exit_code = browser.run()
+
+    assert exit_code == 0
+    assert any("boom" in line for line in log)
+
+
+def test_history_browser_build_ui_returns_curses_ui() -> None:
+    """The browser should fabricate a curses UI when needed."""
+
+    browser = HistoryBrowser(store=StubStore([_make_entry("alpha")]), ui=None)
+    ui = browser._build_ui()
+    assert isinstance(ui, hb.CursesHistoryUI)
+
+
+def test_launch_history_browser_uses_history_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The module-level launcher should delegate to HistoryBrowser."""
+
+    calls: list[str] = []
+
+    class DummyBrowser:
+        def __init__(self) -> None:
+            calls.append("init")
+
+        def run(self) -> int:
+            calls.append("run")
+            return 13
+
+    monkeypatch.setattr(hb, "HistoryBrowser", DummyBrowser)
+
+    exit_code = launch_history_browser()
+
+    assert exit_code == 13
+    assert calls == ["init", "run"]
+
+
+def test_history_session_move_selection_clamps_bounds() -> None:
+    """Selection changes should clamp to the available range."""
+
+    entries = [_make_entry("one"), _make_entry("two"), _make_entry("three")]
+    session = HistorySession(entries, page_size=5)
+    session.apply_filter("")
+    session.move_selection(5)
+    assert session.selection_index == 2
+    session.move_selection(-10)
+    assert session.selection_index == 0
+
+
+def test_prompt_ui_skips_when_no_current_entry() -> None:
+    """Empty selections should loop until a valid choice is made."""
+
+    prompts = iter(["", "q"])
+    log: list[str] = []
+    session = HistorySession([], page_size=5)
+
+    def fake_prompt(_: str) -> str:
+        return next(prompts)
+
+    ui = PromptHistoryUI(prompt=fake_prompt, output=log.append)
+
+    assert ui.run(session) is None
+    assert any("No entries" in line for line in log)
+
+
+def test_prompt_ui_handles_missing_entry_after_selection(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If a selection disappears the UI should prompt again gracefully."""
+
+    prompts = iter(["1", "q"])
+    log: list[str] = []
+    session = HistorySession([_make_entry("alpha")], page_size=5)
+    original_method = hb.HistorySession.current
+    calls = {"count": 0}
+
+    def fake_current(self: hb.HistorySession) -> HistoryEntry | None:
+        if self is session:
+            calls["count"] += 1
+            if calls["count"] == 1:
+                return None
+        return original_method(self)
+
+    monkeypatch.setattr(hb.HistorySession, "current", fake_current)
+
+    def fake_prompt(_: str) -> str:
+        return next(prompts)
+
+    ui = PromptHistoryUI(prompt=fake_prompt, output=log.append)
+
+    assert ui.run(session) is None
+    assert any("Invalid selection" in line for line in log)
+
+
+def test_prompt_ui_reports_invalid_selection_direct() -> None:
+    """Typing an out-of-range number should display feedback immediately."""
+
+    prompts = iter(["5", "q"])
+    log: list[str] = []
+    session = HistorySession([_make_entry("alpha")], page_size=5)
+
+    def fake_prompt(_: str) -> str:
+        return next(prompts)
+
+    ui = PromptHistoryUI(prompt=fake_prompt, output=log.append)
+
+    assert ui.run(session) is None
+    assert any("Invalid selection" in line for line in log)
+
+
+def test_clamp_bounds_values() -> None:
+    """The clamp helper should confine values to the requested bounds."""
+
+    assert _clamp(10, 0, 5) == 5
+    assert _clamp(-3, 0, 5) == 0
+    assert _clamp(3, 0, 5) == 3

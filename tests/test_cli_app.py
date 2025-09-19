@@ -5,12 +5,16 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+import typer
 from typer import Typer
+from typer.main import TyperCommand
 from typer.testing import CliRunner
 
 from sshse import __version__
 from sshse.cli.app import app, main
 from sshse.core.history import HistoryEntry
+
+cli_module = importlib.import_module("sshse.cli.app")
 
 runner = CliRunner()
 
@@ -94,3 +98,56 @@ def test_main_connects_direct_host(monkeypatch: Any) -> None:
     entry = recorded["entry"]
     assert entry.hostname == "example.com"
     assert entry.username == "alice"
+
+
+def test_cli_skips_when_subcommand_invoked() -> None:
+    """The callback should exit early when a subcommand is requested."""
+
+    ctx = typer.Context(TyperCommand(app))
+    ctx.invoked_subcommand = "dummy"
+
+    assert cli_module.cli(ctx, host=None, version=False) is None
+
+
+def test_connect_to_host_requires_hostname(capsys: Any) -> None:
+    """Connecting without a hostname should report an error and exit code."""
+
+    exit_code = cli_module._connect_to_host("")
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "must be supplied" in captured.err
+
+
+def test_split_target_variants() -> None:
+    """Target parsing should handle usernames and malformed inputs."""
+
+    assert cli_module._split_target("server") == ("server", None)
+    assert cli_module._split_target("user@server") == ("server", "user")
+    assert cli_module._split_target("user@") == ("user@", None)
+
+
+def test_main_returns_exit_code_from_typer_exit(monkeypatch: Any) -> None:
+    """When Typer raises Exit the captured code should be returned."""
+
+    def fake_app(*args: Any, **kwargs: Any) -> Any:
+        raise typer.Exit(code=5)
+
+    monkeypatch.setattr(cli_module, "app", fake_app)
+    assert cli_module.main([]) == 5
+
+
+def test_module_run_invokes_cli_main(monkeypatch: Any) -> None:
+    """The module-level run helper should delegate to the CLI entry point."""
+
+    calls: dict[str, Any] = {}
+
+    def fake_main(argv: Any | None = None) -> int:
+        calls["argv"] = argv
+        return 7
+
+    monkeypatch.setattr(cli_module, "main", fake_main)
+    from sshse.__main__ import run
+
+    assert run() == 7
+    assert calls["argv"] is None
