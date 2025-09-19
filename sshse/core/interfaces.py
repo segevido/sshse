@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator
 from typing import Any, Protocol
 
 
-class Result(Mapping[str, Any], Protocol):
+class Result(Protocol):
     """Represents a structured SSH operation result."""
+
+    def __getitem__(self, key: str, /) -> Any: ...
+
+    def __iter__(self) -> Iterator[str]: ...
+
+    def __len__(self) -> int: ...
 
 
 class SSHClient(Protocol):
