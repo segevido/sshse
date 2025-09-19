@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sshse"
+version = "0.1.0"
+description = "SSH Session Manager (sshse) application"
+readme = "README.md"
+authors = [{ name = "Ido Segev" }]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.0",
+    "ruff>=0.5.0",
+    "mypy>=1.8",
+    "pytest>=7.4",
+    "coverage[toml]>=7.3",
+    "bandit>=1.7",
+]
+
+[project.scripts]
+sshse = "sshse.cli.app:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sshse*"]
+exclude = ["myenv", "myenv.*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "UP", "B", "SIM", "A"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["sshse"]
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["sshse"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
