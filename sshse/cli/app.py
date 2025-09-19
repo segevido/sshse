@@ -7,12 +7,14 @@ from typing import Sequence
 import typer
 
 from sshse import __version__
+from sshse.cli.history_menu import launch_history_menu
 
 app = typer.Typer(help="SSH Manager CLI (stub)")
 
 
 @app.callback(invoke_without_command=True)
 def cli(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -25,6 +27,12 @@ def cli(
     if version:
         typer.echo(__version__)
         raise typer.Exit()
+
+    if ctx.invoked_subcommand is not None or ctx.resilient_parsing:
+        return
+
+    exit_code = launch_history_menu()
+    raise typer.Exit(exit_code)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

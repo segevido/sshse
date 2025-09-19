@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import importlib
+
 from typer import Typer
 from typer.testing import CliRunner
 
@@ -20,7 +22,20 @@ def test_app_is_typer_instance() -> None:
 
 def test_main_returns_success() -> None:
     """Main entry point should return success for default invocation."""
-    assert main([]) == 0
+    calls: list[int] = []
+
+    def _fake_menu() -> int:
+        calls.append(1)
+        return 0
+
+    module = importlib.import_module("sshse.cli.app")
+    original = module.launch_history_menu
+    module.launch_history_menu = _fake_menu  # type: ignore[attr-defined]
+    try:
+        assert main([]) == 0
+        assert len(calls) == 1
+    finally:
+        module.launch_history_menu = original  # type: ignore[attr-defined]
 
 
 def test_main_handles_version_flag(capsys: Any) -> None:
