@@ -8,9 +8,9 @@ import importlib
 
 from typer import Typer
 from typer.testing import CliRunner
-
 from sshse import __version__
 from sshse.cli.app import app, main
+from sshse.core.history import HistoryEntry
 
 runner = CliRunner()
 
@@ -56,3 +56,35 @@ def test_short_version_flag_alias() -> None:
     result = runner.invoke(app, ["-V"])
     assert result.exit_code == 0
     assert result.stdout.strip() == __version__
+
+
+def test_main_connects_direct_host(monkeypatch: Any) -> None:
+    """Providing a host argument should trigger an SSH launch."""
+
+    recorded: dict[str, Any] = {}
+
+    class DummyStore:
+        def __init__(self) -> None:
+            recorded["store"] = self
+            self.calls: list[tuple[str, str | None]] = []
+
+        def record(self, hostname: str, *, username: str | None = None, port: int | None = None) -> HistoryEntry:
+            self.calls.append((hostname, username))
+            return HistoryEntry(hostname=hostname, username=username, port=port)
+
+    def fake_run(entry: HistoryEntry) -> int:
+        recorded["entry"] = entry
+        return 0
+
+    module = importlib.import_module("sshse.cli.app")
+    monkeypatch.setattr(module, "HistoryStore", lambda: DummyStore())
+    monkeypatch.setattr(module, "run_ssh", fake_run)
+
+    exit_code = main(["alice@example.com"])
+
+    assert exit_code == 0
+    store = recorded["store"]
+    assert store.calls == [("example.com", "alice")]
+    entry = recorded["entry"]
+    assert entry.hostname == "example.com"
+    assert entry.username == "alice"

@@ -8,6 +8,8 @@ import typer
 
 from sshse import __version__
 from sshse.cli.history_menu import launch_history_menu
+from sshse.cli.ssh_launcher import run_ssh
+from sshse.core.history import HistoryStore
 
 app = typer.Typer(help="SSH Manager CLI (stub)")
 
@@ -15,6 +17,11 @@ app = typer.Typer(help="SSH Manager CLI (stub)")
 @app.callback(invoke_without_command=True)
 def cli(
     ctx: typer.Context,
+    host: str | None = typer.Argument(
+        None,
+        metavar="HOST",
+        help="Connect to HOST via ssh (defaults to history menu when omitted).",
+    ),
     version: bool = typer.Option(
         False,
         "--version",
@@ -31,8 +38,37 @@ def cli(
     if ctx.invoked_subcommand is not None or ctx.resilient_parsing:
         return
 
+    if host:
+        exit_code = _connect_to_host(host)
+        raise typer.Exit(exit_code)
+
     exit_code = launch_history_menu()
     raise typer.Exit(exit_code)
+
+
+def _connect_to_host(target: str) -> int:
+    """Initiate an SSH session to the provided target."""
+
+    hostname, username = _split_target(target)
+    if not hostname:
+        typer.echo("A host value must be supplied.", err=True)
+        return 2
+
+    store = HistoryStore()
+    entry = store.record(hostname=hostname, username=username)
+    return run_ssh(entry)
+
+
+def _split_target(target: str) -> tuple[str, str | None]:
+    """Split a target string into hostname and optional username parts."""
+
+    if "@" not in target:
+        return target, None
+
+    username, _, hostname = target.partition("@")
+    if username and hostname:
+        return hostname, username
+    return target, None
 
 
 def main(argv: Sequence[str] | None = None) -> int:

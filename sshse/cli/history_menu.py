@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import subprocess
 from datetime import datetime
 from typing import Callable, Iterable
 
 import typer
 
+from sshse.cli.ssh_launcher import run_ssh
 from sshse.core.history import HistoryEntry, HistoryStore
 
 
@@ -28,24 +28,6 @@ def _default_output(message: str) -> None:
     typer.echo(message)
 
 
-def _default_launcher(entry: HistoryEntry) -> int:
-    """Invoke the system SSH client for the selected history entry."""
-
-    target = entry.hostname
-    if entry.username:
-        target = f"{entry.username}@{target}"
-
-    command: list[str] = ["ssh", target]
-    if entry.port:
-        command.extend(["-p", str(entry.port)])
-
-    try:
-        return subprocess.call(command)
-    except FileNotFoundError:  # pragma: no cover - defensive guard for missing ssh binary
-        typer.echo("ssh command not found", err=True)
-        return 1
-
-
 class HistoryMenu:
     """Simple text-based menu that surfaces recent SSH targets."""
 
@@ -60,7 +42,7 @@ class HistoryMenu:
         self._store = store if store is not None else HistoryStore()
         self._prompt = prompt if prompt is not None else _default_prompt
         self._output = output if output is not None else _default_output
-        self._launcher = launcher if launcher is not None else _default_launcher
+        self._launcher = launcher if launcher is not None else run_ssh
 
     def run(self) -> int:
         """Display the history menu and act on the user's selection."""
@@ -122,4 +104,3 @@ def launch_history_menu() -> int:
     """Convenience wrapper to instantiate and run the history menu."""
 
     return HistoryMenu().run()
-
