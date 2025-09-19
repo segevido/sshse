@@ -7,7 +7,7 @@ from typing import Sequence
 import typer
 
 from sshse import __version__
-from sshse.cli.history_menu import launch_history_menu
+from sshse.cli.history_browser import launch_history_browser
 from sshse.cli.ssh_launcher import run_ssh
 from sshse.core.history import HistoryStore
 
@@ -42,7 +42,7 @@ def cli(
         exit_code = _connect_to_host(host)
         raise typer.Exit(exit_code)
 
-    exit_code = launch_history_menu()
+    exit_code = launch_history_browser()
     raise typer.Exit(exit_code)
 
 

@@ -29,13 +29,13 @@ def test_main_returns_success() -> None:
         return 0
 
     module = importlib.import_module("sshse.cli.app")
-    original = module.launch_history_menu
-    module.launch_history_menu = _fake_menu  # type: ignore[attr-defined]
+    original = module.launch_history_browser
+    module.launch_history_browser = _fake_menu  # type: ignore[attr-defined]
     try:
         assert main([]) == 0
         assert len(calls) == 1
     finally:
-        module.launch_history_menu = original  # type: ignore[attr-defined]
+        module.launch_history_browser = original  # type: ignore[attr-defined]
 
 
 def test_main_handles_version_flag(capsys: Any) -> None:

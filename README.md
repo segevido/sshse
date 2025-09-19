@@ -18,7 +18,7 @@ pytest
 
 ## Connection History
 
-sshse now persists recent SSH targets to a per-user data file so the interactive menu can surface them quickly.
+sshse now persists recent SSH targets to a per-user data file so the interactive browser can surface them quickly.
 The default location follows the operating system's data directory conventions (for example `~/.local/share/sshse/history.json` on Linux and `~/Library/Application Support/sshse/history.json` on macOS).
-Run `sshse` without arguments to open the TUI, pick a recorded host, and immediately launch `ssh` with the saved username and port.
+Run `sshse` without arguments to open the browser, type to filter hosts, select a number to connect, use `clear` to reset the filter, or press `q` to quit.
 Use `HistoryStore` from `sshse.core.history` to record connections from integrations or future CLI commands.
