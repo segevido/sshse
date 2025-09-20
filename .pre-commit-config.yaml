@@ -25,6 +25,13 @@ repos:
         name: pytest
         entry: python
         language: system
-        args: ["-m", "pytest"]
+        args:
+          [
+            "-m",
+            "pytest",
+            "--cov=sshse",
+            "--cov-report=term-missing",
+            "--cov-fail-under=100",
+          ]
         pass_filenames: false
         always_run: true
