@@ -102,6 +102,73 @@ def test_main_connects_direct_host(monkeypatch: Any) -> None:
     assert entry.username == "alice"
 
 
+def test_main_skips_tui_when_subcommand_requested(monkeypatch: Any, capsys: Any) -> None:
+    """Invoking the CLI with a subcommand should not start the TUI."""
+
+    module = importlib.import_module("sshse.cli.app")
+    tui_calls: list[str] = []
+
+    def fake_browser() -> int:
+        tui_calls.append("called")
+        return 0
+
+    class DummyConfig:
+        def to_payload(self) -> dict[str, Any]:
+            return {"shared_auth_host_patterns": []}
+
+    class DummyStore:
+        def __init__(self, path: Any | None = None) -> None:
+            self.path = path
+
+        def load(self) -> DummyConfig:
+            return DummyConfig()
+
+    config_cli = importlib.import_module("sshse.cli.config")
+    monkeypatch.setattr(module, "launch_history_browser", fake_browser)
+    monkeypatch.setattr(config_cli, "ConfigStore", DummyStore)
+
+    exit_code = module.main(["config", "show"])
+
+    assert exit_code == 0
+    assert not tui_calls
+    captured = capsys.readouterr()
+    assert "shared_auth_host_patterns" in captured.out
+
+
+def test_main_reads_sys_argv_when_not_supplied(monkeypatch: Any, capsys: Any) -> None:
+    """Entry point should consume sys.argv when called without explicit argv."""
+
+    module = importlib.import_module("sshse.cli.app")
+    tui_calls: list[str] = []
+
+    def fake_browser() -> int:
+        tui_calls.append("called")
+        return 0
+
+    class DummyConfig:
+        def to_payload(self) -> dict[str, Any]:
+            return {"shared_auth_host_patterns": []}
+
+    class DummyStore:
+        def __init__(self, path: Any | None = None) -> None:
+            self.path = path
+
+        def load(self) -> DummyConfig:
+            return DummyConfig()
+
+    config_cli = importlib.import_module("sshse.cli.config")
+    monkeypatch.setattr(module, "launch_history_browser", fake_browser)
+    monkeypatch.setattr(config_cli, "ConfigStore", DummyStore)
+    monkeypatch.setattr(module.sys, "argv", ["sshse", "config", "show"])
+
+    exit_code = module.main()
+
+    assert exit_code == 0
+    assert not tui_calls
+    captured = capsys.readouterr()
+    assert "shared_auth_host_patterns" in captured.out
+
+
 def test_cli_skips_when_subcommand_invoked() -> None:
     """The callback should exit early when a subcommand is requested."""
 
@@ -109,6 +176,25 @@ def test_cli_skips_when_subcommand_invoked() -> None:
     ctx.invoked_subcommand = "dummy"
 
     assert cli_module.cli(ctx, version=False) is None
+
+
+def test_cli_skips_tui_when_args_present(monkeypatch: Any) -> None:
+    """Arguments remaining in the context should bypass the TUI launcher."""
+
+    ctx = typer.Context(TyperCommand(app))
+    ctx.args = ["config"]
+
+    module = importlib.import_module("sshse.cli.app")
+    calls: list[str] = []
+
+    def fake_browser() -> int:
+        calls.append("called")
+        return 0
+
+    monkeypatch.setattr(module, "launch_history_browser", fake_browser)
+
+    assert module.cli(ctx, version=False) is None
+    assert not calls
 
 
 def test_connect_to_host_requires_hostname(capsys: Any) -> None:

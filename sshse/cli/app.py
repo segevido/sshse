@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 
 import typer
@@ -35,6 +36,9 @@ def cli(
         raise typer.Exit()
 
     if ctx.invoked_subcommand is not None or ctx.resilient_parsing:
+        return
+
+    if ctx.args:
         return
 
     exit_code = launch_history_browser()
@@ -77,7 +81,7 @@ def _known_subcommand_names() -> set[str]:
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the sshse CLI."""
 
-    args = list(argv) if argv is not None else []
+    args = list(argv) if argv is not None else list(sys.argv[1:])
     if args:
         first = args[0]
         if not first.startswith("-") and first not in _known_subcommand_names():
