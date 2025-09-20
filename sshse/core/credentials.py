@@ -5,13 +5,16 @@ from __future__ import annotations
 import base64
 import json
 import os
+from collections.abc import MutableSequence, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, MutableSequence, Sequence
+from typing import Any
 
-from argon2.low_level import hash_secret_raw, Type as Argon2Type
+from argon2.low_level import Type as Argon2Type
+from argon2.low_level import hash_secret_raw
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -42,8 +45,8 @@ _STORE_VERSION = 1
 class DerivationType(str, Enum):
     """Supported key derivation strategies for the credential store."""
 
-    PASSPHRASE = "passphrase"
-    SSH_KEY = "ssh-key"
+    PASSPHRASE = "passphrase"  # nosec
+    SSH_KEY = "ssh-key"  # nosec
 
 
 def _b64encode(value: bytes) -> str:
@@ -112,7 +115,7 @@ class CredentialRecord:
         return payload
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "CredentialRecord":
+    def from_payload(cls, payload: dict[str, Any]) -> CredentialRecord:
         """Reconstruct a record from serialized data."""
 
         username = payload.get("username")
@@ -479,14 +482,10 @@ class CredentialStore:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 handle.write(serialized)
             os.replace(tmp_path, self._path)
-            try:
+            with suppress(PermissionError, NotImplementedError):  # pragma: no cover
                 os.chmod(self._path, 0o600)
-            except (PermissionError, NotImplementedError):  # pragma: no cover - platform specific
-                pass
         finally:
             if os.path.exists(tmp_path):  # pragma: no cover - defensive cleanup
-                try:
+                with suppress(PermissionError, NotImplementedError):  # pragma: no cover
                     os.chmod(tmp_path, 0o600)
-                except (PermissionError, NotImplementedError):
-                    pass
                 os.remove(tmp_path)

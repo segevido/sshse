@@ -553,9 +553,7 @@ def test_export_to_stdout(tmp_path: Path) -> None:
     assert "secret" in export_result.stdout
 
 
-def test_export_overwrite_prompt_abort(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_export_overwrite_prompt_abort(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When overwrite is declined the command should abort gracefully."""
 
     store_path = tmp_path / "creds.json"
@@ -604,9 +602,7 @@ def test_export_overwrite_prompt_abort(
     assert result.exit_code != 0
 
 
-def test_export_overwrite_prompt_accept(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_export_overwrite_prompt_accept(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Accepting the overwrite prompt should proceed with writing."""
 
     store_path = tmp_path / "creds.json"

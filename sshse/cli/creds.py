@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, TypeVar
 
 import typer
 
@@ -14,12 +15,14 @@ from sshse.core.credentials import (
     CredentialRecord,
     CredentialStore,
     CredentialStoreError,
-    InvalidKeyError,
     DerivationType,
+    InvalidKeyError,
     default_credentials_path,
 )
 
 creds_app = typer.Typer(help="Manage encrypted SSH credentials")
+
+T = TypeVar("T")
 
 
 def _scrub_secret(secret: str | None) -> None:
@@ -95,9 +98,7 @@ def _store_session(
         finally:
             _scrub_secret(secret)
     else:
-        key_path = _prompt_for_ssh_key_path(
-            ssh_key_path, prompt_text="Path to SSH private key"
-        )
+        key_path = _prompt_for_ssh_key_path(ssh_key_path, prompt_text="Path to SSH private key")
         yield mode, None, key_path
 
 
@@ -105,6 +106,14 @@ def _record_identity(record: CredentialRecord) -> tuple[str, str | None, str | N
     """Return a tuple representing a record's identity for comparisons."""
 
     return (record.username, record.hostname, record.host_pattern)
+
+
+def _require_value(value: T | None, message: str) -> T:
+    """Ensure optional secrets are populated before proceeding."""
+
+    if value is None:
+        raise CredentialStoreError(message)
+    return value
 
 
 @creds_app.command("init")
@@ -123,7 +132,6 @@ def init_store(
     ssh_key: Path | None = typer.Option(
         None,
         "--ssh-key",
-        path_type=Path,
         help="Path to the SSH private key used for key derivation.",
     ),
     force: bool = typer.Option(
@@ -135,7 +143,6 @@ def init_store(
     path: Path | None = typer.Option(
         None,
         "--path",
-        path_type=Path,
         help="Location of the credential store file.",
     ),
 ) -> None:
@@ -155,9 +162,7 @@ def init_store(
             finally:
                 _scrub_secret(secret)
         else:
-            key_path = _prompt_for_ssh_key_path(
-                ssh_key, prompt_text="Path to SSH private key"
-            )
+            key_path = _prompt_for_ssh_key_path(ssh_key, prompt_text="Path to SSH private key")
             store.initialize_with_ssh_key(key_path, overwrite=force)
     except CredentialStoreError as exc:
         _handle_error(exc)
@@ -186,7 +191,6 @@ def add_record(
     path: Path | None = typer.Option(
         None,
         "--path",
-        path_type=Path,
         help="Location of the credential store file.",
     ),
     passphrase: str | None = typer.Option(
@@ -197,7 +201,6 @@ def add_record(
     ssh_key: Path | None = typer.Option(
         None,
         "--ssh-key",
-        path_type=Path,
         help="SSH private key path for key-derived stores.",
     ),
 ) -> None:
@@ -232,10 +235,10 @@ def add_record(
             ssh_key_path=ssh_key,
         ) as (derivation, passphrase_secret, key_path):
             if derivation is DerivationType.PASSPHRASE:
-                assert passphrase_secret is not None
+                passphrase_secret = _require_value(passphrase_secret, "passphrase is required")
                 existing_records = store.load_records_with_passphrase(passphrase_secret)
             else:
-                assert key_path is not None
+                key_path = _require_value(key_path, "ssh key path is required")
                 existing_records = store.load_records_with_ssh_key(key_path)
 
             updated: list[CredentialRecord] = []
@@ -248,14 +251,13 @@ def add_record(
             updated.append(record)
 
             if derivation is DerivationType.PASSPHRASE:
-                assert passphrase_secret is not None
+                passphrase_secret = _require_value(passphrase_secret, "passphrase is required")
                 store.save_records_with_passphrase(updated, passphrase_secret)
             else:
-                assert key_path is not None
+                key_path = _require_value(key_path, "ssh key path is required")
                 store.save_records_with_ssh_key(updated, key_path)
     except CredentialStoreError as exc:
         _handle_error(exc)
-        return  # pragma: no cover - _handle_error raises
     finally:
         _scrub_secret(secret_password)
     typer.echo("Credential updated." if replaced else "Credential added.")
@@ -266,7 +268,6 @@ def list_records(
     path: Path | None = typer.Option(
         None,
         "--path",
-        path_type=Path,
         help="Location of the credential store file.",
     ),
     passphrase: str | None = typer.Option(
@@ -277,7 +278,6 @@ def list_records(
     ssh_key: Path | None = typer.Option(
         None,
         "--ssh-key",
-        path_type=Path,
         help="SSH private key path for key-derived stores.",
     ),
     json_output: bool = typer.Option(
@@ -297,14 +297,13 @@ def list_records(
             ssh_key_path=ssh_key,
         ) as (derivation, passphrase_secret, key_path):
             if derivation is DerivationType.PASSPHRASE:
-                assert passphrase_secret is not None
+                passphrase_secret = _require_value(passphrase_secret, "passphrase is required")
                 records = store.load_records_with_passphrase(passphrase_secret)
             else:
-                assert key_path is not None
+                key_path = _require_value(key_path, "ssh key path is required")
                 records = store.load_records_with_ssh_key(key_path)
     except CredentialStoreError as exc:
         _handle_error(exc)
-        return  # pragma: no cover - _handle_error raises
 
     entries = sorted(
         records,
@@ -352,7 +351,6 @@ def remove_record(
     path: Path | None = typer.Option(
         None,
         "--path",
-        path_type=Path,
         help="Location of the credential store file.",
     ),
     passphrase: str | None = typer.Option(
@@ -363,7 +361,6 @@ def remove_record(
     ssh_key: Path | None = typer.Option(
         None,
         "--ssh-key",
-        path_type=Path,
         help="SSH private key path for key-derived stores.",
     ),
 ) -> None:
@@ -382,30 +379,27 @@ def remove_record(
             ssh_key_path=ssh_key,
         ) as (derivation, passphrase_secret, key_path):
             if derivation is DerivationType.PASSPHRASE:
-                assert passphrase_secret is not None
+                passphrase_secret = _require_value(passphrase_secret, "passphrase is required")
                 records = store.load_records_with_passphrase(passphrase_secret)
             else:
-                assert key_path is not None
+                key_path = _require_value(key_path, "ssh key path is required")
                 records = store.load_records_with_ssh_key(key_path)
 
             target_identity = (username, host, host_pattern)
-            updated = [
-                item for item in records if _record_identity(item) != target_identity
-            ]
+            updated = [item for item in records if _record_identity(item) != target_identity]
 
             if len(updated) == len(records):
                 typer.echo("Credential not found.", err=True)
                 raise typer.Exit(1)
 
             if derivation is DerivationType.PASSPHRASE:
-                assert passphrase_secret is not None
+                passphrase_secret = _require_value(passphrase_secret, "passphrase is required")
                 store.save_records_with_passphrase(updated, passphrase_secret)
             else:
-                assert key_path is not None
+                key_path = _require_value(key_path, "ssh key path is required")
                 store.save_records_with_ssh_key(updated, key_path)
     except CredentialStoreError as exc:
         _handle_error(exc)
-        return  # pragma: no cover - _handle_error raises
 
     typer.echo("Credential removed.")
 
@@ -421,7 +415,6 @@ def rotate_key(
     path: Path | None = typer.Option(
         None,
         "--path",
-        path_type=Path,
         help="Location of the credential store file.",
     ),
     current_passphrase: str | None = typer.Option(
@@ -432,7 +425,6 @@ def rotate_key(
     current_ssh_key: Path | None = typer.Option(
         None,
         "--current-ssh-key",
-        path_type=Path,
         help="Current SSH private key when the store uses key derivation.",
     ),
     new_passphrase: str | None = typer.Option(
@@ -443,7 +435,6 @@ def rotate_key(
     new_ssh_key: Path | None = typer.Option(
         None,
         "--new-ssh-key",
-        path_type=Path,
         help="New SSH private key path when rotating to key derivation.",
     ),
 ) -> None:
@@ -455,7 +446,6 @@ def rotate_key(
         current_mode = store.derivation_type()
     except CredentialStoreError as exc:
         _handle_error(exc)
-        return  # pragma: no cover - _handle_error raises
 
     secret: str | None = None
     secret_key_path: Path | None = None
@@ -471,6 +461,13 @@ def rotate_key(
                 prompt_text="Path to current SSH private key",
             )
 
+        if current_mode is DerivationType.PASSPHRASE:
+            secret = _require_value(secret, "current passphrase required")
+            current_secret: str | Path = secret
+        else:
+            secret_key_path = _require_value(secret_key_path, "current SSH key path required")
+            current_secret = secret_key_path
+
         if target is DerivationType.PASSPHRASE:
             new_secret = _prompt_for_passphrase(
                 new_passphrase,
@@ -478,7 +475,7 @@ def rotate_key(
                 confirm=True,
             )
             store.rotate_key_to_passphrase(
-                current_secret=secret if current_mode is DerivationType.PASSPHRASE else secret_key_path,
+                current_secret=current_secret,
                 new_passphrase=new_secret,
                 current_uses_ssh_key=(current_mode is DerivationType.SSH_KEY),
             )
@@ -489,7 +486,7 @@ def rotate_key(
                 prompt_text="Path to new SSH private key",
             )
             store.rotate_key_to_ssh_key(
-                current_secret=secret if current_mode is DerivationType.PASSPHRASE else secret_key_path,
+                current_secret=current_secret,
                 new_private_key_path=target_key_path,
                 current_uses_ssh_key=(current_mode is DerivationType.SSH_KEY),
             )
@@ -507,7 +504,6 @@ def export_records(
     path: Path | None = typer.Option(
         None,
         "--path",
-        path_type=Path,
         help="Location of the credential store file.",
     ),
     passphrase: str | None = typer.Option(
@@ -518,13 +514,11 @@ def export_records(
     ssh_key: Path | None = typer.Option(
         None,
         "--ssh-key",
-        path_type=Path,
         help="SSH private key path for key-derived stores.",
     ),
     output: Path | None = typer.Option(
         None,
         "--output",
-        path_type=Path,
         help="Optional file to receive exported credentials (JSON).",
     ),
     assume_yes: bool = typer.Option(
@@ -545,14 +539,13 @@ def export_records(
             ssh_key_path=ssh_key,
         ) as (derivation, passphrase_secret, key_path):
             if derivation is DerivationType.PASSPHRASE:
-                assert passphrase_secret is not None
+                passphrase_secret = _require_value(passphrase_secret, "passphrase is required")
                 records = store.load_records_with_passphrase(passphrase_secret)
             else:
-                assert key_path is not None
+                key_path = _require_value(key_path, "ssh key path is required")
                 records = store.load_records_with_ssh_key(key_path)
     except CredentialStoreError as exc:
         _handle_error(exc)
-        return  # pragma: no cover - _handle_error raises
 
     payload: list[dict[str, Any]] = [
         {
@@ -577,8 +570,6 @@ def export_records(
     fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
         handle.write(serialized)
-    try:
+    with suppress(PermissionError, NotImplementedError):  # pragma: no cover - platform specific
         os.chmod(output, 0o600)
-    except (PermissionError, NotImplementedError):  # pragma: no cover - platform specific
-        pass
     typer.echo(f"Credentials exported to {output}")

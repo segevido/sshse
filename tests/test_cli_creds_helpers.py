@@ -57,7 +57,9 @@ def test_store_session_handles_both_derivation_modes(monkeypatch: pytest.MonkeyP
         "sshse.cli.creds._prompt_for_passphrase",
         lambda provided, **kwargs: provided or "prompted-passphrase",
     )
-    with creds._store_session(DummyStore(DerivationType.PASSPHRASE), passphrase="secret", ssh_key_path=None) as (
+    with creds._store_session(
+        DummyStore(DerivationType.PASSPHRASE), passphrase="secret", ssh_key_path=None
+    ) as (
         mode,
         passphrase,
         key,
@@ -70,7 +72,9 @@ def test_store_session_handles_both_derivation_modes(monkeypatch: pytest.MonkeyP
         "sshse.cli.creds._prompt_for_ssh_key_path",
         lambda provided, **kwargs: Path("/tmp/id_ed25519"),
     )
-    with creds._store_session(DummyStore(DerivationType.SSH_KEY), passphrase=None, ssh_key_path=None) as (
+    with creds._store_session(
+        DummyStore(DerivationType.SSH_KEY), passphrase=None, ssh_key_path=None
+    ) as (
         mode,
         passphrase,
         key,
@@ -78,3 +82,10 @@ def test_store_session_handles_both_derivation_modes(monkeypatch: pytest.MonkeyP
         assert mode is DerivationType.SSH_KEY
         assert passphrase is None
         assert key == Path("/tmp/id_ed25519")
+
+
+def test_require_value_raises_for_missing_data() -> None:
+    """_require_value should raise when provided with ``None``."""
+
+    with pytest.raises(creds.CredentialStoreError):
+        creds._require_value(None, "missing value")

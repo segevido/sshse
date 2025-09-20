@@ -28,7 +28,7 @@ class AppConfig:
         }
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "AppConfig":
+    def from_payload(cls, payload: dict[str, Any]) -> AppConfig:
         """Create a configuration instance from serialized data."""
 
         raw_patterns = payload.get("shared_auth_host_patterns", [])

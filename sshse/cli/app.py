@@ -69,8 +69,8 @@ def _split_target(target: str) -> tuple[str, str | None]:
 def _known_subcommand_names() -> set[str]:
     """Collect all registered top-level command names."""
 
-    names = {info.name for info in app.registered_commands}
-    names.update(info.name for info in app.registered_groups)
+    names: set[str] = {info.name for info in app.registered_commands if info.name is not None}
+    names.update(name for info in app.registered_groups if (name := info.name) is not None)
     return names
 
 

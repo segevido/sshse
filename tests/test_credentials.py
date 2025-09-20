@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import Path
-import base64
 
 import pytest
 
@@ -13,9 +13,9 @@ from sshse.core.credentials import (
     CredentialRecord,
     CredentialStore,
     CredentialStoreError,
+    DerivationType,
     InvalidKeyError,
     NotInitializedError,
-    DerivationType,
     default_credentials_path,
 )
 
@@ -45,7 +45,9 @@ def test_initialize_and_round_trip_with_passphrase(store_path: Path) -> None:
     store.save_records_with_passphrase(records, "tr1ck-h0rse")
     loaded = store.load_records_with_passphrase("tr1ck-h0rse")
 
-    assert {(item.username, item.hostname, item.host_pattern, item.password) for item in loaded} == {
+    assert {
+        (item.username, item.hostname, item.host_pattern, item.password) for item in loaded
+    } == {
         ("alice", "example.com", None, "s3cret"),
         ("bob", None, r"^web-.*$", "pw"),
     }
@@ -105,7 +107,9 @@ def test_tamper_detection_via_ciphertext_mutation(store_path: Path) -> None:
 
     payload = json.loads(store_path.read_text(encoding="utf-8"))
     ciphertext = payload["ciphertext"]
-    mutated = (ciphertext[:-1] + ("A" if ciphertext[-1] != "A" else "B")) if ciphertext else ciphertext
+    mutated = (
+        (ciphertext[:-1] + ("A" if ciphertext[-1] != "A" else "B")) if ciphertext else ciphertext
+    )
     payload["ciphertext"] = mutated
     store_path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -230,7 +234,9 @@ def test_record_from_payload_requires_username_and_password() -> None:
         CredentialRecord.from_payload({"username": None, "password": "pw"})
 
 
-def test_default_credentials_path_uses_platformdirs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_default_credentials_path_uses_platformdirs(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """The default storage path should respect the platform data directory."""
 
     monkeypatch.setattr("sshse.core.credentials.user_data_path", lambda _: tmp_path)

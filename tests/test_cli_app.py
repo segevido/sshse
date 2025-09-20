@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import importlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -155,9 +155,7 @@ def test_module_run_invokes_cli_main(monkeypatch: Any) -> None:
     assert calls["argv"] is None
 
 
-def test_config_cli_add_show_and_remove(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_config_cli_add_show_and_remove(tmp_path: Path, monkeypatch: Any) -> None:
     """Config subcommands should manage shared auth patterns on disk."""
 
     monkeypatch.setattr("sshse.config.user_data_path", lambda _: tmp_path)

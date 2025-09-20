@@ -157,7 +157,9 @@ def test_remove_shared_auth_pattern_handles_missing_entries() -> None:
     assert config.remove_shared_auth_host_pattern("missing") is False
 
 
-def test_config_store_load_handles_read_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_config_store_load_handles_read_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """An unreadable file should behave like missing configuration."""
 
     path = tmp_path / "config.json"
