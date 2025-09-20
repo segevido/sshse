@@ -12,8 +12,10 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
-    "typer>=0.12",
+    "argon2-cffi>=23.1",
+    "cryptography>=42.0.0",
     "platformdirs>=4.2",
+    "typer>=0.12",
 ]
 
 [project.optional-dependencies]

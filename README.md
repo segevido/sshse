@@ -13,6 +13,7 @@ SSH Session Manager (`sshse`) streamlines opening secure shell sessions, keeps a
 		- [For Users](#for-users)
 		- [For Developers](#for-developers)
 	- [Usage](#usage)
+	- [Credential Store](#credential-store)
 	- [Connection History](#connection-history)
 	- [Project Structure](#project-structure)
 	- [Development](#development)
@@ -26,6 +27,7 @@ sshse is a Typer-based command-line application for managing SSH workflows. The 
 - Quick-connect shorthand: run `sshse host` or `sshse user@host` to open a session immediately.
 - Interactive history browser that supports fuzzy filtering, keyboard navigation, and graceful fallbacks when a full TUI is unavailable.
 - Persistent history powered by `HistoryStore`, stored in the OS-specific data directory (for example `~/.local/share/sshse/history.json` on Linux, `~/Library/Application Support/sshse/history.json` on macOS).
+- Encrypted credential vault managed via `ssh creds` with AES-256-GCM encryption and Argon2id key stretching.
 - Clean CLI ergonomics built with Typer, including a built-in `--version` flag and helpful error messaging.
 - Modular layout prepared for adapters, plugins, and inventory integrations so new capabilities can be added without disrupting the core.
 
@@ -76,6 +78,27 @@ Additional options:
 - `sshse --help` displays the Typer-generated help screen for all commands and options.
 
 The CLI returns a non-zero exit code on failure so it can be composed in scripts.
+
+## Credential Store
+Initialize a local encrypted credential store (passphrase protected by default):
+
+```bash
+sshse creds init
+```
+
+Add or update credentials for a host:
+
+```bash
+sshse creds add --username alice --host example.com
+```
+
+List stored credentials without exposing secrets:
+
+```bash
+sshse creds list --json
+```
+
+Refer to [docs/commands/creds.md](docs/commands/creds.md) for detailed workflows, key rotation, and export guidance.
 
 ## Connection History
 Every successful connection is recorded through `HistoryStore`, which:

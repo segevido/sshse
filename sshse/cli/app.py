@@ -7,21 +7,20 @@ from collections.abc import Sequence
 import typer
 
 from sshse import __version__
+from sshse.cli.config import config_app
+from sshse.cli.creds import creds_app
 from sshse.cli.history_browser import launch_history_browser
 from sshse.cli.ssh_launcher import run_ssh
 from sshse.core.history import HistoryStore
 
 app = typer.Typer(help="SSH Manager CLI (stub)")
+app.add_typer(config_app, name="config", help="Inspect and adjust configuration")
+app.add_typer(creds_app, name="creds", help="Manage encrypted SSH credentials")
 
 
 @app.callback(invoke_without_command=True)
 def cli(
     ctx: typer.Context,
-    host: str | None = typer.Argument(
-        None,
-        metavar="HOST",
-        help="Connect to HOST via ssh (defaults to history menu when omitted).",
-    ),
     version: bool = typer.Option(
         False,
         "--version",
@@ -37,10 +36,6 @@ def cli(
 
     if ctx.invoked_subcommand is not None or ctx.resilient_parsing:
         return
-
-    if host:
-        exit_code = _connect_to_host(host)
-        raise typer.Exit(exit_code)
 
     exit_code = launch_history_browser()
     raise typer.Exit(exit_code)
@@ -71,11 +66,25 @@ def _split_target(target: str) -> tuple[str, str | None]:
     return target, None
 
 
+def _known_subcommand_names() -> set[str]:
+    """Collect all registered top-level command names."""
+
+    names = {info.name for info in app.registered_commands}
+    names.update(info.name for info in app.registered_groups)
+    return names
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the sshse CLI."""
 
+    args = list(argv) if argv is not None else []
+    if args:
+        first = args[0]
+        if not first.startswith("-") and first not in _known_subcommand_names():
+            return _connect_to_host(first)
+
     try:
-        app(args=list(argv) if argv is not None else None, standalone_mode=False)
+        app(args=args, standalone_mode=False)
     except typer.Exit as exc:  # exit path already handled by Typer
         return exc.exit_code
     except Exception as exc:  # pragma: no cover - unexpected errors bubble to the shell
