@@ -22,6 +22,8 @@ def test_init_command_outputs_success(tmp_path: Path) -> None:
         [
             "creds",
             "init",
+            "--mode",
+            "passphrase",
             "--passphrase",
             "prompted",
             "--path",
@@ -44,6 +46,8 @@ def test_export_overwrite_confirmation(tmp_path: Path) -> None:
         [
             "creds",
             "init",
+            "--mode",
+            "passphrase",
             "--passphrase",
             "pw",
             "--path",

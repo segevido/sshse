@@ -32,6 +32,8 @@ def test_init_add_list_remove_workflow(tmp_path: Path) -> None:
         [
             "creds",
             "init",
+            "--mode",
+            "passphrase",
             "--passphrase",
             "hunter2",
             "--path",
@@ -123,7 +125,16 @@ def test_add_updates_existing_record(tmp_path: Path) -> None:
 
     runner.invoke(
         app,
-        ["creds", "init", "--passphrase", "first", "--path", str(store_path)],
+        [
+            "creds",
+            "init",
+            "--mode",
+            "passphrase",
+            "--passphrase",
+            "first",
+            "--path",
+            str(store_path),
+        ],
     )
 
     runner.invoke(
@@ -176,7 +187,16 @@ def test_rotate_key_to_new_passphrase(tmp_path: Path) -> None:
 
     runner.invoke(
         app,
-        ["creds", "init", "--passphrase", "oldpass", "--path", str(store_path)],
+        [
+            "creds",
+            "init",
+            "--mode",
+            "passphrase",
+            "--passphrase",
+            "oldpass",
+            "--path",
+            str(store_path),
+        ],
     )
 
     runner.invoke(
@@ -228,7 +248,16 @@ def test_export_writes_json_file(tmp_path: Path) -> None:
 
     runner.invoke(
         app,
-        ["creds", "init", "--passphrase", "secret", "--path", str(store_path)],
+        [
+            "creds",
+            "init",
+            "--mode",
+            "passphrase",
+            "--passphrase",
+            "secret",
+            "--path",
+            str(store_path),
+        ],
     )
     runner.invoke(
         app,
@@ -274,12 +303,12 @@ def test_export_writes_json_file(tmp_path: Path) -> None:
 
 
 def test_init_interactive_prompts_passphrase(tmp_path: Path) -> None:
-    """Interactive prompting should allow initializing without flags."""
+    """Interactive prompting should allow initializing without supplying secrets."""
 
     store_path = tmp_path / "creds.json"
     result = runner.invoke(
         app,
-        ["creds", "init", "--path", str(store_path)],
+        ["creds", "init", "--mode", "passphrase", "--path", str(store_path)],
         input="promptpass\npromptpass\n",
     )
     assert result.exit_code == 0
@@ -292,7 +321,16 @@ def test_list_with_wrong_passphrase(tmp_path: Path) -> None:
     store_path = tmp_path / "creds.json"
     runner.invoke(
         app,
-        ["creds", "init", "--passphrase", "correct", "--path", str(store_path)],
+        [
+            "creds",
+            "init",
+            "--mode",
+            "passphrase",
+            "--passphrase",
+            "correct",
+            "--path",
+            str(store_path),
+        ],
     )
 
     result = runner.invoke(
@@ -340,7 +378,10 @@ def test_add_requires_single_target(tmp_path: Path) -> None:
     """Adding credentials must receive exactly one targeting flag."""
 
     store_path = tmp_path / "creds.json"
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
 
     result = runner.invoke(
         app,
@@ -370,7 +411,10 @@ def test_add_prompts_for_password_and_handles_blank(
     """A blank password supplied via prompt should abort the command."""
 
     store_path = tmp_path / "creds.json"
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
 
     monkeypatch.setattr("sshse.cli.creds.typer.prompt", lambda *args, **kwargs: "")
 
@@ -400,7 +444,10 @@ def test_add_prompted_password_for_host_pattern(
     """Prompted passwords should be accepted and stored for host patterns."""
 
     store_path = tmp_path / "creds.json"
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
 
     monkeypatch.setattr("sshse.cli.creds.typer.prompt", lambda *args, **kwargs: "prompted")
 
@@ -447,7 +494,10 @@ def test_remove_nonexistent_credential(tmp_path: Path) -> None:
     """Removing a missing record should return a failure exit code."""
 
     store_path = tmp_path / "creds.json"
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
     runner.invoke(
         app,
         [
@@ -490,7 +540,10 @@ def test_remove_requires_single_target(tmp_path: Path) -> None:
     """Removal command should enforce mutually exclusive targeting flags."""
 
     store_path = tmp_path / "creds.json"
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
 
     result = runner.invoke(
         app,
@@ -518,7 +571,10 @@ def test_export_to_stdout(tmp_path: Path) -> None:
     """Export without an output file should print JSON to stdout."""
 
     store_path = tmp_path / "creds.json"
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
     runner.invoke(
         app,
         [
@@ -559,7 +615,10 @@ def test_export_overwrite_prompt_abort(tmp_path: Path, monkeypatch: pytest.Monke
     store_path = tmp_path / "creds.json"
     output_path = tmp_path / "dump.json"
 
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
     runner.invoke(
         app,
         [
@@ -608,7 +667,10 @@ def test_export_overwrite_prompt_accept(tmp_path: Path, monkeypatch: pytest.Monk
     store_path = tmp_path / "creds.json"
     output_path = tmp_path / "dump.json"
 
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
     runner.invoke(
         app,
         [
@@ -655,7 +717,10 @@ def test_rotate_key_to_ssh_mode(tmp_path: Path) -> None:
     new_key_path = tmp_path / "id_ed25519"
     new_key_path.write_bytes(b"-----BEGIN KEY-----\nabc\n")
 
-    runner.invoke(app, ["creds", "init", "--passphrase", "pw", "--path", str(store_path)])
+    runner.invoke(
+        app,
+        ["creds", "init", "--mode", "passphrase", "--passphrase", "pw", "--path", str(store_path)],
+    )
     runner.invoke(
         app,
         [
@@ -975,7 +1040,7 @@ def test_init_handles_store_error(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda path: BrokenStore(path=Path("dummy")),
     )
 
-    result = runner.invoke(app, ["creds", "init", "--passphrase", "pw"])
+    result = runner.invoke(app, ["creds", "init", "--mode", "passphrase", "--passphrase", "pw"])
 
     assert result.exit_code == 1
     assert "init-error" in result.stderr
@@ -998,6 +1063,36 @@ def test_init_store_direct_echo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     )
 
     assert any("Credential store initialized" in message for message in messages)
+
+
+def test_cli_init_defaults_to_ssh_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Calling init without options should derive the key from the default SSH path."""
+
+    store_path = tmp_path / "creds.json"
+    recorded: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        "sshse.cli.creds._resolve_store", lambda path: CredentialStore(path=store_path)
+    )
+
+    def _fake_initialize(
+        self: CredentialStore, private_key_path: Path, *, overwrite: bool = False
+    ) -> None:
+        recorded["path"] = private_key_path
+        recorded["overwrite"] = overwrite
+
+    monkeypatch.setattr(
+        CredentialStore,
+        "initialize_with_ssh_key",
+        _fake_initialize,
+        raising=False,
+    )
+
+    result = runner.invoke(app, ["creds", "init", "--force"])
+
+    assert result.exit_code == 0
+    assert recorded["path"] == creds_module.DEFAULT_SSH_KEY_PATH
+    assert recorded["overwrite"] is True
 
 
 def test_export_with_ssh_key_mode(tmp_path: Path) -> None:

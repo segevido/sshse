@@ -13,7 +13,7 @@ All files are written atomically with `0600` permissions.
 ## Quick Start
 
 ```bash
-# Initialize a new store guarded by a passphrase
+# Initialize a new store derived from your SSH private key
 sshse creds init
 
 # Add credentials for a specific host
@@ -40,10 +40,11 @@ sshse creds init [--mode passphrase|ssh-key] [--passphrase TEXT] [--ssh-key PATH
 ```
 
 Creates a new, empty credential store. The default mode derives the encryption
-key from a user-supplied passphrase using Argon2id with memory-hard defaults.
+key from the SSH private key at `~/.ssh/id_rsa` (override with `--ssh-key`),
+using HKDF-SHA256.
 
-- `--mode ssh-key` reads an SSH private key file and derives the master key via
-  HKDF-SHA256. Provide the key path with `--ssh-key` (prompts if omitted).
+- `--mode passphrase` switches to Argon2id derivation from a user-supplied
+  passphrase. Provide the secret with `--passphrase` (prompts if omitted).
 - `--path` overrides the default location (`<user-data>/sshse/credentials.json`).
 - `--force` allows overwriting an existing store; otherwise initialization fails
   to protect prior data.

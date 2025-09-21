@@ -80,7 +80,7 @@ Additional options:
 The CLI returns a non-zero exit code on failure so it can be composed in scripts.
 
 ## Credential Store
-Initialize a local encrypted credential store (passphrase protected by default):
+Initialize a local encrypted credential store (defaults to deriving from `~/.ssh/id_rsa`):
 
 ```bash
 sshse creds init

@@ -21,6 +21,8 @@ from sshse.core.credentials import (
     default_credentials_path,
 )
 
+DEFAULT_SSH_KEY_PATH = Path("~/.ssh/id_rsa").expanduser()
+
 creds_app = typer.Typer(help="Manage encrypted SSH credentials")
 
 T = TypeVar("T")
@@ -71,12 +73,16 @@ def _prompt_for_passphrase(
     return value
 
 
-def _prompt_for_ssh_key_path(provided: Path | None, *, prompt_text: str) -> Path:
+def _prompt_for_ssh_key_path(
+    provided: Path | None,
+    *,
+    prompt_text: str,
+) -> Path:
     """Obtain an SSH private key path from options or interactive input."""
 
     if provided is not None:
         return provided
-    value = typer.prompt(prompt_text)
+    value = typer.prompt(prompt_text, default=str(DEFAULT_SSH_KEY_PATH))
     path = Path(value).expanduser()
     return path
 
@@ -127,7 +133,7 @@ def creds_root(ctx: typer.Context) -> None:
 @creds_app.command("init")
 def init_store(
     mode: DerivationType = typer.Option(
-        DerivationType.PASSPHRASE,
+        DerivationType.SSH_KEY,
         "--mode",
         help="Select passphrase or SSH key derivation for the master key.",
         case_sensitive=False,
@@ -137,10 +143,11 @@ def init_store(
         "--passphrase",
         help="Provide the master passphrase non-interactively (use with caution).",
     ),
-    ssh_key: Path | None = typer.Option(
-        None,
+    ssh_key: Path = typer.Option(
+        DEFAULT_SSH_KEY_PATH,
         "--ssh-key",
         help="Path to the SSH private key used for key derivation.",
+        show_default=str(DEFAULT_SSH_KEY_PATH),
     ),
     force: bool = typer.Option(
         False,

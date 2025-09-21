@@ -29,18 +29,20 @@ def test_prompt_for_passphrase_rejects_empty_input(monkeypatch: pytest.MonkeyPat
 
 
 def test_prompt_for_ssh_key_path_prompts_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When no path is provided the helper should prompt the user."""
+    """When no path is provided the helper should prompt the user with a default."""
 
-    called: dict[str, Path] = {}
+    called: dict[str, object] = {}
 
-    def _fake_prompt(message: str, **_: object) -> str:
-        called["message"] = Path(message)
+    def _fake_prompt(message: str, **kwargs: object) -> str:
+        called["message"] = message
+        called["default"] = kwargs.get("default")
         return "~/id_rsa"
 
     monkeypatch.setattr("sshse.cli.creds.typer.prompt", _fake_prompt)
     result = creds._prompt_for_ssh_key_path(None, prompt_text="Key path")
     assert result == Path("~/id_rsa").expanduser()
-    assert "message" in called
+    assert called["message"] == "Key path"
+    assert called["default"] == str(creds.DEFAULT_SSH_KEY_PATH)
 
 
 def test_store_session_handles_both_derivation_modes(monkeypatch: pytest.MonkeyPatch) -> None:
