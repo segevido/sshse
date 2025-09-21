@@ -1,6 +1,6 @@
 # sshse
 
-![Status](https://img.shields.io/badge/status-alpha-orange) ![Version](https://img.shields.io/badge/version-0.1.1-blue) ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white) ![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-alpha-orange) ![Version](https://img.shields.io/badge/version-0.2.0-blue) ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white) ![License](https://img.shields.io/badge/license-MIT-green)
 
 SSH Session Manager (`sshse`) streamlines opening secure shell sessions, keeps a rich connection history, and lays the groundwork for automation around inventory, scripting, and file transfer.
 
