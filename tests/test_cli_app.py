@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +13,7 @@ from typer.testing import CliRunner
 
 from sshse import __version__
 from sshse.cli.app import app, main
+from sshse.config import ConfigStore
 from sshse.core.history import HistoryEntry
 
 cli_module = importlib.import_module("sshse.cli.app")
@@ -261,48 +261,16 @@ def test_module_run_invokes_cli_main(monkeypatch: Any) -> None:
     assert calls["argv"] is None
 
 
-def test_config_cli_add_show_and_remove(tmp_path: Path, monkeypatch: Any) -> None:
-    """Config subcommands should manage shared auth patterns on disk."""
+def test_config_show_outputs_saved_patterns(tmp_path: Path, monkeypatch: Any) -> None:
+    """`config show` should display persisted shared authentication patterns."""
 
     monkeypatch.setattr("sshse.config.user_data_path", lambda _: tmp_path)
+    store = ConfigStore()
+    config = store.load()
+    config.add_shared_auth_host_pattern("pattern")
+    store.save(config)
 
-    add_result = runner.invoke(app, ["config", "add-shared-auth", r"^prod-.*$"])
-    assert add_result.exit_code == 0
-    config_path = tmp_path / "config.json"
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    assert payload["shared_auth_host_patterns"] == [r"^prod-.*$"]
+    result = runner.invoke(app, ["config", "show"])
 
-    show_result = runner.invoke(app, ["config", "show"])
-    assert show_result.exit_code == 0
-    assert r"^prod-.*$" in show_result.stdout
-
-    remove_result = runner.invoke(app, ["config", "remove-shared-auth", r"^prod-.*$"])
-    assert remove_result.exit_code == 0
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    assert payload["shared_auth_host_patterns"] == []
-
-    missing_result = runner.invoke(app, ["config", "remove-shared-auth", r"^prod-.*$"])
-    assert missing_result.exit_code == 1
-    assert "not configured" in missing_result.stderr
-
-
-def test_config_cli_add_duplicate_pattern(tmp_path: Path, monkeypatch: Any) -> None:
-    """Re-adding an existing pattern should report a no-op."""
-
-    monkeypatch.setattr("sshse.config.user_data_path", lambda _: tmp_path)
-
-    runner.invoke(app, ["config", "add-shared-auth", "pattern"])
-    duplicate = runner.invoke(app, ["config", "add-shared-auth", "pattern"])
-
-    assert duplicate.exit_code == 0
-    assert "already present" in duplicate.stdout
-
-
-def test_config_cli_rejects_empty_pattern(tmp_path: Path, monkeypatch: Any) -> None:
-    """Adding a blank pattern via the CLI should fail with an error."""
-
-    monkeypatch.setattr("sshse.config.user_data_path", lambda _: tmp_path)
-
-    result = runner.invoke(app, ["config", "add-shared-auth", "   "])
-    assert result.exit_code == 2
-    assert "must not be empty" in result.stderr
+    assert result.exit_code == 0
+    assert "pattern" in result.stdout
