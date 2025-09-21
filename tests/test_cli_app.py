@@ -64,6 +64,26 @@ def test_short_version_flag_alias() -> None:
     assert result.stdout.strip() == __version__
 
 
+def test_config_command_shows_help_when_missing_subcommand() -> None:
+    """Invoking the config group without a subcommand should display help."""
+
+    result = runner.invoke(app, ["config"])
+
+    assert result.exit_code == 0
+    assert "config [OPTIONS] COMMAND" in result.stdout
+    assert "Missing command" not in result.stdout
+
+
+def test_creds_command_shows_help_when_missing_subcommand() -> None:
+    """Invoking the creds group without a subcommand should display help."""
+
+    result = runner.invoke(app, ["creds"])
+
+    assert result.exit_code == 0
+    assert "creds [OPTIONS] COMMAND" in result.stdout
+    assert "Missing command" not in result.stdout
+
+
 def test_main_connects_direct_host(monkeypatch: Any) -> None:
     """Providing a host argument should trigger an SSH launch."""
 

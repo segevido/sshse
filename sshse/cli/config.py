@@ -6,9 +6,17 @@ import json
 
 import typer
 
+from sshse.cli._shared import show_help_if_no_subcommand
 from sshse.config import ConfigStore
 
 config_app = typer.Typer(help="Manage application configuration")
+
+
+@config_app.callback(invoke_without_command=True)
+def config_root(ctx: typer.Context) -> None:
+    """Display contextual help when no subcommand is provided."""
+
+    show_help_if_no_subcommand(ctx)
 
 
 @config_app.command("show")

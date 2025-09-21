@@ -11,6 +11,7 @@ from typing import Any, TypeVar
 
 import typer
 
+from sshse.cli._shared import show_help_if_no_subcommand
 from sshse.core.credentials import (
     CredentialRecord,
     CredentialStore,
@@ -114,6 +115,13 @@ def _require_value(value: T | None, message: str) -> T:
     if value is None:
         raise CredentialStoreError(message)
     return value
+
+
+@creds_app.callback(invoke_without_command=True)
+def creds_root(ctx: typer.Context) -> None:
+    """Display contextual help when no credential subcommand is chosen."""
+
+    show_help_if_no_subcommand(ctx)
 
 
 @creds_app.command("init")
