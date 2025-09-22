@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+import sshse.paths
 from sshse.config import AppConfig, ConfigStore, default_config_path
 
 
@@ -24,7 +25,8 @@ def test_default_config_path_uses_platformdirs(
     """The default config path should rely on the platform data directory."""
 
     expected_dir = tmp_path / "data"
-    monkeypatch.setattr("sshse.config.user_data_path", lambda _: expected_dir)
+    monkeypatch.delenv("SSHSE_DATA_DIR", raising=False)
+    monkeypatch.setattr(sshse.paths, "user_data_path", lambda _: expected_dir)
 
     default_path = default_config_path()
 

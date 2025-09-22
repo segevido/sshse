@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+import sshse.paths
 from sshse.core.history import HistoryEntry, HistoryStore, default_history_path
 
 
@@ -96,7 +97,8 @@ def test_default_history_path_uses_platformdirs(
     """The default history path should be derived from the platform data directory."""
 
     expected_dir = tmp_path / "data"
-    monkeypatch.setattr("sshse.core.history.user_data_path", lambda appname: expected_dir)
+    monkeypatch.delenv("SSHSE_DATA_DIR", raising=False)
+    monkeypatch.setattr(sshse.paths, "user_data_path", lambda _: expected_dir)
 
     default_path = default_history_path()
     assert default_path == expected_dir / "history.json"

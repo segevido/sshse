@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from platformdirs import user_data_path
+from sshse.paths import data_dir
 
 __all__ = [
     "HistoryEntry",
@@ -85,9 +85,7 @@ class HistoryEntry:
 def default_history_path() -> Path:
     """Resolve the default location for history persistence."""
 
-    data_dir = user_data_path("sshse")
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / _DEFAULT_HISTORY_FILENAME
+    return data_dir() / _DEFAULT_HISTORY_FILENAME
 
 
 class HistoryStore:

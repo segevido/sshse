@@ -67,6 +67,10 @@ explicit_package_bases = true
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+markers = [
+    "unit: mark for default unit tests.",
+    "system: mark for end-to-end CLI system tests.",
+]
 
 [tool.coverage.run]
 branch = true

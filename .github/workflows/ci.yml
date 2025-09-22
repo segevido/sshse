@@ -60,5 +60,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e '.[dev]'
 
-      - name: Run pytest with coverage
-        run: pytest --cov=sshse --cov-report=term-missing --cov-fail-under=100
+      - name: Run pytest with coverage (unit)
+        run: pytest -m unit --cov=sshse --cov-report=term-missing --cov-fail-under=100
+
+      - name: Run system tests
+        run: pytest -m system

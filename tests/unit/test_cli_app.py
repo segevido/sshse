@@ -264,7 +264,7 @@ def test_module_run_invokes_cli_main(monkeypatch: Any) -> None:
 def test_config_show_outputs_saved_patterns(tmp_path: Path, monkeypatch: Any) -> None:
     """`config show` should display persisted shared authentication patterns."""
 
-    monkeypatch.setattr("sshse.config.user_data_path", lambda _: tmp_path)
+    monkeypatch.setenv("SSHSE_DATA_DIR", str(tmp_path))
     store = ConfigStore()
     config = store.load()
     config.add_shared_auth_host_pattern("pattern")

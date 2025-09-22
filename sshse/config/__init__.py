@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from platformdirs import user_data_path
+from sshse.paths import data_dir
 
 __all__ = ["AppConfig", "ConfigStore", "default_config_path"]
 
@@ -73,9 +73,7 @@ class AppConfig:
 def default_config_path() -> Path:
     """Return the default location for the application's configuration file."""
 
-    data_dir = user_data_path("sshse")
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / _DEFAULT_CONFIG_FILENAME
+    return data_dir() / _DEFAULT_CONFIG_FILENAME
 
 
 class ConfigStore:
