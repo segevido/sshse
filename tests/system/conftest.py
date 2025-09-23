@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from .ssh_backend import OpenSSHBackend, SSHBackendError, SSHBackendUnavailable
+
 RunCli = Callable[
     [Sequence[str] | None, Mapping[str, str] | None, str | None],
     subprocess.CompletedProcess[str],
@@ -84,3 +86,29 @@ def system_data_dir(system_environment: tuple[dict[str, str], Path]) -> Path:
 
     _, data_dir = system_environment
     return data_dir
+
+
+@pytest.fixture(scope="session")
+def ssh_backend(tmp_path_factory):
+    """Launch a reusable OpenSSH backend for CLI connectivity tests."""
+
+    root = tmp_path_factory.mktemp("openssh-backend")
+    backend: OpenSSHBackend | None = None
+    try:
+        backend = OpenSSHBackend(root)
+        backend.start()
+    except (SSHBackendUnavailable, SSHBackendError) as exc:
+        pytest.skip(f"OpenSSH backend unavailable: {exc}")
+    try:
+        assert backend is not None  # mypy appeasement
+        yield backend
+    finally:
+        if backend is not None:
+            backend.stop()
+
+
+@pytest.fixture
+def ssh_client_env(tmp_path, ssh_backend: OpenSSHBackend) -> dict[str, str]:
+    """Provide environment overrides for connecting to the SSH backend."""
+
+    return ssh_backend.create_client_environment(tmp_path)

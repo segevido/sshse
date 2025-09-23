@@ -22,6 +22,21 @@ CLI via real subprocess execution. The goals of these tests are to:
   this override so system tests never touch a developer's real state.
 - The fixture also ensures `PYTHONPATH` includes the project root so the
   in-repo sources are importable without an editable install.
+- The `ssh_backend` fixture provisions an ephemeral OpenSSH server, pairing it
+  with a synthetic `$HOME` prepared by `ssh_client_env` so CLI invocations can
+  execute real SSH flows without touching a developer's personal configuration.
+
+### OpenSSH test backend
+
+- The backend generates disposable host and user keys under a temporary root,
+  configures `sshd` to listen on `127.0.0.1`, and skips tests automatically if
+  the environment lacks the required `sshd`/`ssh-keygen` binaries or cannot bind
+  a loopback port.
+- Client fixtures install a dedicated `~/.ssh/config`, `known_hosts`, and
+  identity file to keep the interaction hermetic while ensuring host-key checks
+  remain strict.
+- Remote sessions default to running `printf 'backend-ready\n'`, producing a
+  deterministic exit code so the CLI process terminates promptly during tests.
 
 ## Running the system suite
 
